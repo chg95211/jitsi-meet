@@ -11,8 +11,9 @@ import {
     Transport
 } from '../../../modules/transport';
 import { parseURLParams } from '../base/config';
+import { DeviceSelection } from '../device-selection';
 
-import SettingsDialog from './components/web/SettingsDialog';
+import TabContainer from './components/web/TabContainer';
 
 const logger = Logger.getLogger(__filename);
 
@@ -55,9 +56,9 @@ export default class DeviceSelectionPopup {
 
         this._dialogProps = {
             availableDevices: {},
-            currentAudioInputId: '',
-            currentAudioOutputId: '',
-            currentVideoInputId: '',
+            selectedAudioInputId: '',
+            selectedAudioOutputId: '',
+            selectedVideoInputId: '',
             disableAudioInputChange: true,
             disableBlanketClickDismiss: true,
             disableDeviceChange: true,
@@ -66,10 +67,8 @@ export default class DeviceSelectionPopup {
             hasVideoPermission: JitsiMeetJS.mediaDevices
                 .isDevicePermissionGranted.bind(null, 'video'),
             hideAudioInputPreview: !JitsiMeetJS.isCollectingLocalStats(),
-            hideAudioOutputSelect: true,
-            onCancel: this.close,
-            onSubmit: this._onSubmit,
-            showDeviceSettings: true
+            hideAudioOutputSelect: true
+
         };
         this._initState();
     }
@@ -156,9 +155,9 @@ export default class DeviceSelectionPopup {
         ]) => {
             this._changeDialogProps({
                 availableDevices,
-                currentAudioInputId: currentDevices.audioInput,
-                currentAudioOutputId: currentDevices.audioOutput,
-                currentVideoInputId: currentDevices.videoInput,
+                selectedAudioInputId: currentDevices.audioInput,
+                selectedAudioOutputId: currentDevices.audioOutput,
+                selectedVideoInputId: currentDevices.videoInput,
                 disableAudioInputChange: !multiAudioInputSupported,
                 disableDeviceChange: !listAvailable || !changeAvailable,
                 hideAudioOutputSelect: !changeOutputAvailable
@@ -232,19 +231,19 @@ export default class DeviceSelectionPopup {
         const promises = [];
 
         if (newSettings.selectedVideoInputId
-                !== this._dialogProps.currentVideoInputId) {
+                !== this._dialogProps.selectedVideoInputId) {
             promises.push(
                 this._setVideoInputDevice(newSettings.selectedVideoInputId));
         }
 
         if (newSettings.selectedAudioInputId
-                !== this._dialogProps.currentAudioInputId) {
+                !== this._dialogProps.selectedAudioInputId) {
             promises.push(
                 this._setAudioInputDevice(newSettings.selectedAudioInputId));
         }
 
         if (newSettings.selectedAudioOutputId
-                !== this._dialogProps.currentAudioOutputId) {
+                !== this._dialogProps.selectedAudioOutputId) {
             promises.push(
                 this._setAudioOutputDevice(newSettings.selectedAudioOutputId));
         }
@@ -261,7 +260,16 @@ export default class DeviceSelectionPopup {
         ReactDOM.render(
             <I18nextProvider i18n = { this._i18next }>
                 <AtlasKitThemeProvider mode = 'dark'>
-                    <SettingsDialog { ...this._dialogProps } />
+                    <TabContainer
+                        onCancel = { this.close }
+                        onSubmit = { this.close }
+                        tabs = { [ {
+                            component: DeviceSelection,
+                            label: 'settings.devices',
+                            props: this._dialogProps,
+                            submit: this._onSubmit,
+                            styles: 'settings-pane devices-pane'
+                        } ] } />
                 </AtlasKitThemeProvider>
             </I18nextProvider>,
             document.getElementById('react'));

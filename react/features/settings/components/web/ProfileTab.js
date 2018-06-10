@@ -5,6 +5,14 @@ import { FieldTextStateless } from '@atlaskit/field-text';
 import React, { Component } from 'react';
 
 import { translate } from '../../../base/i18n';
+import UIEvents from '../../../../../service/UI/UIEvents';
+
+import {
+    sendAnalytics,
+    createProfilePanelButtonEvent
+} from '../../../analytics';
+
+declare var APP: Object;
 
 /**
  * The type of the React {@code Component} props of {@link ProfileTab}.
@@ -34,7 +42,7 @@ export type Props = {
     /**
      * Callback invoked when the server side auth flow is triggered.
      */
-    onAuthToggle: Function,
+    closeDialog: Function,
 
     /**
      * Callback invoked when the entered display name has changed.
@@ -58,6 +66,19 @@ export type Props = {
  * @extends Component
  */
 class ProfileTab extends Component<Props> {
+    /**
+     * Initializes a new {@code ConnectedSettingsDialog} instance.
+     *
+     * @param {Props} props - The React {@code Component} props to initialize
+     * the new {@code ConnectedSettingsDialog} instance with.
+     */
+    constructor(props: Props) {
+        super(props);
+
+        // Bind event handlers so they are only bound once for every instance.
+        this._onAuthToggle = this._onAuthToggle.bind(this);
+    }
+
     /**
      * Implements React's {@link Component#render()}.
      *
@@ -106,6 +127,38 @@ class ProfileTab extends Component<Props> {
         );
     }
 
+    _onAuthToggle: () => void;
+
+    /**
+     * Shows the dialog for logging in or out of a server and closes this
+     * dialog.
+     *
+     * @private
+     * @returns {void}
+     */
+    _onAuthToggle() {
+        if (this.props.authLogin) {
+            sendAnalytics(createProfilePanelButtonEvent('logout.button'));
+
+            APP.UI.messageHandler.openTwoButtonDialog({
+                leftButtonKey: 'dialog.Yes',
+                msgKey: 'dialog.logoutQuestion',
+                submitFunction(evt, yes) {
+                    if (yes) {
+                        APP.UI.emitEvent(UIEvents.LOGOUT);
+                    }
+                },
+                titleKey: 'dialog.logoutTitle'
+            });
+        } else {
+            sendAnalytics(createProfilePanelButtonEvent('login.button'));
+
+            APP.UI.emitEvent(UIEvents.AUTH_CLICKED);
+        }
+
+        this.props.closeDialog();
+    }
+
     /**
      * Returns a React Element for interacting with server-side authentication.
      *
@@ -115,7 +168,6 @@ class ProfileTab extends Component<Props> {
     _renderAuth() {
         const {
             authLogin,
-            onAuthToggle,
             t
         } = this.props;
 
@@ -131,7 +183,7 @@ class ProfileTab extends Component<Props> {
                 <Button
                     appearance = 'primary'
                     id = 'login_button'
-                    onClick = { onAuthToggle }
+                    onClick = { this._onAuthToggle }
                     type = 'button'>
                     { authLogin ? t('toolbar.logout') : t('toolbar.login') }
                 </Button>
